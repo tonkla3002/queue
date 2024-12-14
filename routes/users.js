@@ -6,58 +6,11 @@ const router = express.Router();
 /***************************** For user *******************************/
 const secretKey = "poy hruang wang sa gang";
 
-//login
-router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+router.post("/:group", async (req, res,next) => {
+  const group = req.params.group;
   try {
-      const result = await pool.query(
-      `SELECT * FROM users WHERE username = $1 AND password = $2`,
-      [username, password]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Invalid username or password" });
-    }
-
-    const token = jwt.sign({ username }, secretKey, {
-      expiresIn: "1m",
-    });
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      maxAge: 1 * 60 * 1000,
-    });
-
-    console.log({ token: token, username: username, password: password });
-    res.json({ message: "Login successful", token });
-  } catch (error) {
-    console.error("Error fetching data:", error.message);
-    res.status(500).send("Authentication failed");
-  }
-});
-
-router.get("/login", async (req, res) => {
-  try {
-    const token = req.cookies.token;
-    const decoded = jwt.verify(token, secretKey);
-    console.log(decoded);
-    const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [
-      decoded.username,
-    ]);
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error fetching data:", error.message);
-    res.status(500).send("Authentication failed");
-  }
-});
-
-router.post("/", async (req, res) => {
-  try {
-
     const payload = { userId: req.body.userId || "defaultUserId" };
 
-    // Create a JWT token
     const token = jwt.sign(payload, secretKey, {
       expiresIn: "1m",
     });
@@ -67,24 +20,18 @@ router.post("/", async (req, res) => {
       secure: true,
       maxAge: 1 * 60 * 1000,
     });
-
-    console.log({ token: token});
-    res.json({ message: "Login successful", token });
-  } catch (error) {
-    console.error("Error fetching data:", error.message);
-    res.status(500).send("Authentication failed");
-  }
-});
-
-//get users
-router.get("/", async (req, res,next) => {
-  try {
-    const token = req.cookies.token;
-    const decoded = jwt.verify(token, secretKey);
-    next()
-    console.log(decoded);
-    const result = await pool.query(`SELECT * FROM users`);
-    res.json(result.rows);
+    const result = await pool.query(`WITH first_row AS (
+                                    SELECT "number_table"
+                                    FROM public.table_frame
+                                    WHERE "group_table" = $1
+                                    ORDER BY "number_table" DESC
+                                    LIMIT 1
+                                    )
+                                    INSERT INTO public.table_frame ("number_table", "group_table",token)
+                                    SELECT COALESCE(MAX("number_table"), 0) + 1, $1, $2
+                                    FROM public.table_frame
+                                    WHERE "group_table" = $1;`, [group,token]);
+    res.json({message:"success",group:group});
   } catch (error) {
     console.error("Error fetching data:", error.message);
     res.status(500).send("Authentication failed");
