@@ -68,9 +68,9 @@ router.get("/RefreshQueue", authenticateApiKey, async (req, res) => {
 });
 
 //add queue
-router.post("/RefreshQueue", authenticateApiKey, async (req, res) => {
+router.post("/RefreshQueue/:group", authenticateApiKey, async (req, res) => {
   try {
-    const { group } = req.body;
+    const { group } = req.params;
 
     const query = `
                   WITH first_row AS (
@@ -96,8 +96,8 @@ router.post("/RefreshQueue", authenticateApiKey, async (req, res) => {
 });
 
 //delete queue
-router.delete("/CalledQueue", authenticateApiKey, async (req, res) => {
-  const { group } = req.body; // รับค่าจาก request body
+router.delete("/CalledQueue/:group", authenticateApiKey, async (req, res) => {
+  const { group } = req.params; // รับค่าจาก request params
 
   try {
     // ทำการ query เพื่อลบแถวและดึงข้อมูลที่ถูกลบกลับมา
