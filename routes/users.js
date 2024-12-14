@@ -6,6 +6,23 @@ const router = express.Router();
 /***************************** For user *******************************/
 const secretKey = "poy hruang wang sa gang";
 
+
+router.get("/", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    const decoded = jwt.verify(token, secretKey);
+    const result = await pool.query(
+      "SELECT group_table,group_table || '' || LPAD(number_table::text, 4, '0') AS group_number_table FROM table_frame WHERE token = $1",
+      [token]
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching data:", error.message);
+    res.status(500).send("Internal server error");
+  }
+});
+
+
 router.post("/:group", async (req, res,next) => {
   const group = req.params.group;
   try {
