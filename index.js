@@ -23,7 +23,7 @@ app.use(cookieParser());
 
 // Routes
 app.get("/", (req, res) => {
-  res.json({ message: "poy hruang wang sa gang" });
+  res.json({ message: "Frame cha cha cha" });
 });
 
 app.get("/auth", authenticateApiKey, (req, res) => {
