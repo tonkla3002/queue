@@ -95,48 +95,38 @@ router.post("/RefreshQueue/:group", authenticateApiKey, async (req, res) => {
   }
 });
 
-//delete queue
-router.delete("/CalledQueue/:group", authenticateApiKey, async (req, res) => {
-  const { group } = req.params; // รับค่าจาก request params
+//update queue
+
+router.put('/CalledQueue/:group',authenticateApiKey, async (req, res) => {
+  const { group } = req.params;
 
   try {
-    // ทำการ query เพื่อลบแถวและดึงข้อมูลที่ถูกลบกลับมา
-    const result = await pool.query(
-      `
-        WITH first_row AS (
-          SELECT "number_table"
-          FROM public.table_frame
-          WHERE "group_table" = $1
-          ORDER BY "number_table" ASC
-          LIMIT 1
-        )
-        DELETE FROM public.table_frame
-        WHERE "group_table" = $1 
-        AND "number_table" = (SELECT "number_table" FROM first_row)
-        RETURNING group_table || '' || LPAD(number_table::text, 4, '0') AS delete_number_table;  
-      `,
-      [group]
-    );
+      // Update the record
+      await pool.query(
+          `UPDATE table_frame SET status = 1 
+            WHERE number_table = (SELECT MIN(number_table) FROM table_frame WHERE group_table = $1 AND status = 0) AND group_table = $1`,
+          [group]
+      );
 
-    // ตรวจสอบว่าแถวถูกลบสำเร็จ
-    if (result.rows.length > 0) {
-      // ถ้ามีแถวที่ถูกลบ, ส่งข้อมูลที่ถูกลบกลับไป
-      res.status(200).json(result.rows[0]);
-    } else {
-      // หากไม่พบแถวที่จะลบ
-      res.status(404).json({
-        message: "No data found to delete",
+      // Fetch all records sorted by `updated_at` DESC
+      const result = await pool.query(
+          `SELECT status, group_table || '' || LPAD(number_table::text, 4, '0') AS group_number_table FROM table_frame 
+          WHERE status = 1 
+          ORDER BY number_table DESC
+          LIMIT 1
+          `
+      );
+
+      res.json({
+          message: 'Data updated successfully.',
+          data: result.rows,
       });
-    }
   } catch (error) {
-    // หากเกิดข้อผิดพลาด
-    console.error(error);
-    res.status(500).json({
-      message: "Error while deleting the data",
-      error: error.message,
-    });
+      console.error('Error updating data:', error);
+      res.status(500).json({ error: 'An error occurred.' });
   }
 });
+
 
 /***************************** For admin *******************************/
 
@@ -163,5 +153,7 @@ router.get("/all", authenticateApiKey, async (req, res) => {
     res.status(500).send("Internal server error");
   }
 });
+
+
 
 module.exports = router;
