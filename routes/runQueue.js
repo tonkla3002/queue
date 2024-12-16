@@ -103,18 +103,19 @@ router.put('/CalledQueue/:group',authenticateApiKey, async (req, res) => {
   try {
       // Update the record
       await pool.query(
-          `UPDATE table_frame SET status = 1 
-            WHERE number_table = (SELECT MIN(number_table) FROM table_frame WHERE group_table = $1 AND status = 0) AND group_table = $1`,
+          `UPDATE table_frame SET status_table = 1 
+            WHERE number_table = (SELECT MIN(number_table) FROM table_frame WHERE group_table = $1 AND status_table = 0) AND group_table = $1`,
           [group]
       );
 
       // Fetch all records sorted by `updated_at` DESC
       const result = await pool.query(
-          `SELECT status, group_table || '' || LPAD(number_table::text, 4, '0') AS group_number_table FROM table_frame 
-          WHERE status = 1 
+          `SELECT status_table, group_table || '' || LPAD(number_table::text, 4, '0') AS group_number_table FROM table_frame 
+          WHERE status_table = 1 AND group_table = $1
           ORDER BY number_table DESC
           LIMIT 1
-          `
+          `,
+          [group]
       );
 
       res.json({
